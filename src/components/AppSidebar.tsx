@@ -1,4 +1,4 @@
-import { LayoutDashboard, Ticket, FolderKanban, CheckSquare, Shield, Users } from "lucide-react";
+import { LayoutDashboard, Ticket, FolderKanban, CheckSquare, Shield, Users, BarChart3 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -20,6 +20,7 @@ const employeeRoles = ["reinigung", "service", "sicherheit"];
 const allItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: [...adminRoles, ...managerRoles, ...employeeRoles] },
   { title: "Tickets", url: "/dashboard/tickets", icon: Ticket, roles: [...adminRoles, ...managerRoles] },
+  { title: "Statistik", url: "/dashboard/statistik", icon: BarChart3, roles: [...adminRoles, ...managerRoles] },
   { title: "Projekte", url: "/dashboard/projekte", icon: FolderKanban, roles: [...adminRoles, ...managerRoles] },
   { title: "Mitarbeiter", url: "/dashboard/mitarbeiter", icon: Users, roles: adminRoles },
   { title: "Meine Aufgaben", url: "/dashboard/aufgaben", icon: CheckSquare, roles: [...managerRoles, ...employeeRoles] },
