@@ -12,6 +12,7 @@ import TicketList from "./pages/tickets/TicketList";
 import TicketCreate from "./pages/tickets/TicketCreate";
 import TicketDetail from "./pages/tickets/TicketDetail";
 import StatistikDashboard from "./pages/StatistikDashboard";
+import AlfredChat from "./pages/AlfredChat";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="mitarbeiter" element={<PlaceholderPage title="Mitarbeiter" />} />
               <Route path="admin" element={<PlaceholderPage title="Admin" />} />
               <Route path="aufgaben" element={<PlaceholderPage title="Meine Aufgaben" />} />
+              <Route path="alfred" element={<AlfredChat />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
