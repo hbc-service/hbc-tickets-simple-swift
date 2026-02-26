@@ -37,6 +37,41 @@ const TicketDetail = () => {
   const [commentText, setCommentText] = useState("");
 
   const canChangeStatus = profile?.role === "admin" || profile?.role === "manager";
+  const canAssign = canChangeStatus;
+
+  const { data: assignableUsers } = useQuery({
+    queryKey: ["assignable-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, role")
+        .in("role", ["admin", "manager", "techniker"])
+        .order("full_name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: canAssign,
+  });
+
+  const updateAssignmentMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("tickets")
+        .update({ assigned_to: userId })
+        .eq("id", id!);
+      if (error) throw error;
+      return userId;
+    },
+    onSuccess: (userId) => {
+      queryClient.invalidateQueries({ queryKey: ["ticket", id] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+      const userName = assignableUsers?.find((u) => u.id === userId)?.full_name ?? "Unbekannt";
+      toast({ title: "Zugewiesen", description: `Ticket zugewiesen an ${userName}` });
+    },
+    onError: () => {
+      toast({ title: "Fehler", description: "Zuweisung konnte nicht gespeichert werden.", variant: "destructive" });
+    },
+  });
 
   const { data: ticket, isLoading: ticketLoading } = useQuery({
     queryKey: ["ticket", id],
@@ -237,7 +272,28 @@ const TicketDetail = () => {
             <MetaRow label="Objekt" value={ticket.objects?.name} />
             <MetaRow label="Kategorie" value={ticket.category} />
             <MetaRow label="Erstellt von" value={createdByName} />
-            <MetaRow label="Zugewiesen an" value={assignedToName} />
+            <div>
+              <p className="text-xs text-muted-foreground">Zugewiesen an</p>
+              {canAssign ? (
+                <Select
+                  value={ticket.assigned_to ?? ""}
+                  onValueChange={(v) => updateAssignmentMutation.mutate(v)}
+                >
+                  <SelectTrigger className="mt-1 h-8 text-sm">
+                    <SelectValue placeholder="Nicht zugewiesen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableUsers?.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name ?? u.role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm font-medium">{assignedToName}</p>
+              )}
+            </div>
             <MetaRow
               label="Erstellt am"
               value={new Date(ticket.created_at).toLocaleDateString("de-DE")}
