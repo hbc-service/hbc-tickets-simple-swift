@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import DashboardHome from "./pages/DashboardHome";
 import PlaceholderPage from "./pages/PlaceholderPage";
+import TicketList from "./pages/tickets/TicketList";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -24,7 +25,7 @@ const App = () => (
             <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<DashboardHome />} />
-              <Route path="tickets" element={<PlaceholderPage title="Tickets" />} />
+              <Route path="tickets" element={<TicketList />} />
               <Route path="projekte" element={<PlaceholderPage title="Projekte" />} />
               <Route path="mitarbeiter" element={<PlaceholderPage title="Mitarbeiter" />} />
               <Route path="admin" element={<PlaceholderPage title="Admin" />} />
