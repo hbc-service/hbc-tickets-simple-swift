@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -24,6 +25,7 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
 
 const TicketList = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["tickets"],
@@ -46,7 +48,7 @@ const TicketList = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Tickets</h1>
-        <Button>
+        <Button onClick={() => navigate("/dashboard/tickets/new")}>
           <Plus className="h-4 w-4" />
           Neues Ticket
         </Button>
