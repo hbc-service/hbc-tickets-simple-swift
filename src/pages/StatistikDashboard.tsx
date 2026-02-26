@@ -1,7 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Download } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
@@ -21,6 +26,57 @@ const priorityLabels: Record<string, string> = {
 };
 
 const StatistikDashboard = () => {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
+  const canExport = profile?.role === "admin" || profile?.role === "manager";
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(`
+          id, title, status, priority, category, created_at,
+          objects(name),
+          profiles!assigned_to(full_name),
+          profiles!created_by(full_name)
+        `)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      const headers = ["ID", "Titel", "Status", "Priorität", "Kategorie", "Objekt", "Zugewiesen an", "Erstellt von", "Erstellt am"];
+      const rows = (data ?? []).map((t: any) => [
+        t.id,
+        t.title,
+        t.status,
+        t.priority,
+        t.category ?? "",
+        t.objects?.name ?? "",
+        (t as any)["profiles!assigned_to"]?.full_name ?? "",
+        (t as any)["profiles!created_by"]?.full_name ?? "",
+        new Date(t.created_at).toLocaleDateString("de-DE"),
+      ]);
+      const csvContent = [headers, ...rows]
+        .map((row) => row.map((cell: any) => `"${cell}"`).join(";"))
+        .join("\n");
+
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `hbc-tickets-${new Date().toISOString().split("T")[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Export erfolgreich", description: `${rows.length} Tickets exportiert` });
+    } catch {
+      toast({ title: "Fehler", description: "Export fehlgeschlagen.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // 1. Tickets nach Status
   const { data: statusData, isLoading: l1 } = useQuery({
     queryKey: ["stats", "status"],
@@ -119,7 +175,15 @@ const StatistikDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Statistiken & Auswertungen</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Statistiken & Auswertungen</h1>
+        {canExport && (
+          <Button onClick={handleExport} disabled={exporting} variant="outline">
+            <Download className="h-4 w-4" />
+            {exporting ? "Exportiere…" : "CSV exportieren"}
+          </Button>
+        )}
+      </div>
 
       {/* KPI-Karten */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
