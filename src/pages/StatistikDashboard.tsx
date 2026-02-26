@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download } from "lucide-react";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
 } from "recharts";
@@ -29,7 +32,19 @@ const StatistikDashboard = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
+  const [zeitraum, setZeitraum] = useState("30");
   const canExport = profile?.role === "admin" || profile?.role === "manager";
+
+  const zeitraumDays = Number(zeitraum);
+  const vonDatum = zeitraumDays > 0
+    ? new Date(Date.now() - zeitraumDays * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  // helper to apply date filter
+  const applyDateFilter = (query: any) => {
+    if (vonDatum) return query.gte("created_at", vonDatum);
+    return query;
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -77,52 +92,42 @@ const StatistikDashboard = () => {
     }
   };
 
-  // 1. Tickets nach Status
   const { data: statusData, isLoading: l1 } = useQuery({
-    queryKey: ["stats", "status"],
+    queryKey: ["stats", "status", zeitraum],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("status");
+      const { data, error } = await applyDateFilter(
+        supabase.from("tickets").select("status")
+      );
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data.forEach((t: any) => {
-        counts[t.status] = (counts[t.status] || 0) + 1;
-      });
+      data.forEach((t: any) => { counts[t.status] = (counts[t.status] || 0) + 1; });
       return Object.entries(counts).map(([status, anzahl]) => ({
-        name: statusLabels[status] ?? status,
-        anzahl,
-        status,
+        name: statusLabels[status] ?? status, anzahl, status,
       }));
     },
   });
 
-  // 2. Tickets nach Priorität
   const { data: priorityData, isLoading: l2 } = useQuery({
-    queryKey: ["stats", "priority"],
+    queryKey: ["stats", "priority", zeitraum],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("priority");
+      const { data, error } = await applyDateFilter(
+        supabase.from("tickets").select("priority")
+      );
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data.forEach((t: any) => {
-        counts[t.priority] = (counts[t.priority] || 0) + 1;
-      });
+      data.forEach((t: any) => { counts[t.priority] = (counts[t.priority] || 0) + 1; });
       return Object.entries(counts).map(([priority, anzahl]) => ({
-        name: priorityLabels[priority] ?? priority,
-        anzahl,
+        name: priorityLabels[priority] ?? priority, anzahl,
       }));
     },
   });
 
-  // 3. Top 5 Objekte
   const { data: objectData, isLoading: l3 } = useQuery({
-    queryKey: ["stats", "objects"],
+    queryKey: ["stats", "objects", zeitraum],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("objects(name)");
+      const { data, error } = await applyDateFilter(
+        supabase.from("tickets").select("objects(name)")
+      );
       if (error) throw error;
       const counts: Record<string, number> = {};
       data.forEach((t: any) => {
@@ -136,16 +141,18 @@ const StatistikDashboard = () => {
     },
   });
 
-  // 4. Tickets pro Woche (letzte 8 Wochen)
   const { data: weeklyData, isLoading: l4 } = useQuery({
-    queryKey: ["stats", "weekly"],
+    queryKey: ["stats", "weekly", zeitraum],
     queryFn: async () => {
-      const eightWeeksAgo = new Date();
-      eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("created_at")
-        .gte("created_at", eightWeeksAgo.toISOString());
+      let query = supabase.from("tickets").select("created_at");
+      if (vonDatum) {
+        query = query.gte("created_at", vonDatum);
+      } else {
+        const eightWeeksAgo = new Date();
+        eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+        query = query.gte("created_at", eightWeeksAgo.toISOString());
+      }
+      const { data, error } = await query;
       if (error) throw error;
 
       const weeks: Record<string, number> = {};
@@ -165,24 +172,38 @@ const StatistikDashboard = () => {
     },
   });
 
-  // KPI calculations
   const totalTickets = statusData?.reduce((sum, s) => sum + s.anzahl, 0) ?? 0;
   const erledigtCount = statusData?.find((s) => s.status === "erledigt")?.anzahl ?? 0;
   const erledigungsquote = totalTickets > 0 ? Math.round((erledigtCount / totalTickets) * 100) : 0;
-  const avgPerWeek = totalTickets > 0 ? (totalTickets / 8).toFixed(1) : "0";
+  const weeksCount = weeklyData?.length || 1;
+  const avgPerWeek = totalTickets > 0 ? (totalTickets / weeksCount).toFixed(1) : "0";
 
   const isLoading = l1 || l2 || l3 || l4;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-foreground">Statistiken & Auswertungen</h1>
-        {canExport && (
-          <Button onClick={handleExport} disabled={exporting} variant="outline">
-            <Download className="h-4 w-4" />
-            {exporting ? "Exportiere…" : "CSV exportieren"}
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <Select value={zeitraum} onValueChange={setZeitraum}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Letzte 7 Tage</SelectItem>
+              <SelectItem value="30">Letzte 30 Tage</SelectItem>
+              <SelectItem value="90">Letzte 90 Tage</SelectItem>
+              <SelectItem value="365">Letzte 12 Monate</SelectItem>
+              <SelectItem value="0">Gesamt</SelectItem>
+            </SelectContent>
+          </Select>
+          {canExport && (
+            <Button onClick={handleExport} disabled={exporting} variant="outline">
+              <Download className="h-4 w-4" />
+              {exporting ? "Exportiere…" : "CSV exportieren"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KPI-Karten */}
