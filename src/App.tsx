@@ -10,6 +10,7 @@ import DashboardHome from "./pages/DashboardHome";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import TicketList from "./pages/tickets/TicketList";
 import TicketCreate from "./pages/tickets/TicketCreate";
+import TicketDetail from "./pages/tickets/TicketDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +29,7 @@ const App = () => (
               <Route index element={<DashboardHome />} />
               <Route path="tickets" element={<TicketList />} />
               <Route path="tickets/new" element={<TicketCreate />} />
+              <Route path="tickets/:id" element={<TicketDetail />} />
               <Route path="projekte" element={<PlaceholderPage title="Projekte" />} />
               <Route path="mitarbeiter" element={<PlaceholderPage title="Mitarbeiter" />} />
               <Route path="admin" element={<PlaceholderPage title="Admin" />} />

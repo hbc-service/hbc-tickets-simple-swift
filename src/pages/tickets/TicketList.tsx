@@ -82,7 +82,7 @@ const TicketList = () => {
                 const s = statusConfig[ticket.status] ?? { label: ticket.status, className: "" };
                 const p = priorityConfig[ticket.priority] ?? { label: ticket.priority, className: "" };
                 return (
-                  <TableRow key={ticket.id}>
+                  <TableRow key={ticket.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/dashboard/tickets/${ticket.id}`)}>
                     <TableCell className="font-medium">{ticket.title}</TableCell>
                     <TableCell>{ticket.objects?.name ?? "–"}</TableCell>
                     <TableCell>
