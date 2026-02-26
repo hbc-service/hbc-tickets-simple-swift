@@ -1,11 +1,16 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -27,10 +32,14 @@ const TicketList = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
 
+  const [statusFilter, setStatusFilter] = useState("alle");
+  const [priorityFilter, setPriorityFilter] = useState("alle");
+  const [searchText, setSearchText] = useState("");
+
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["tickets"],
+    queryKey: ["tickets", statusFilter, priorityFilter, searchText],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tickets")
         .select(`
           id, title, status, priority, created_at,
@@ -39,6 +48,18 @@ const TicketList = () => {
         `)
         .order("created_at", { ascending: false })
         .limit(50);
+
+      if (statusFilter && statusFilter !== "alle") {
+        query = query.eq("status", statusFilter);
+      }
+      if (priorityFilter && priorityFilter !== "alle") {
+        query = query.eq("priority", priorityFilter);
+      }
+      if (searchText) {
+        query = query.ilike("title", `%${searchText}%`);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -54,6 +75,51 @@ const TicketList = () => {
         </Button>
       </div>
 
+      {/* Filter-Leiste */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="alle">Alle Status</SelectItem>
+            <SelectItem value="offen">Offen</SelectItem>
+            <SelectItem value="in_bearbeitung">In Bearbeitung</SelectItem>
+            <SelectItem value="erledigt">Erledigt</SelectItem>
+            <SelectItem value="eskaliert">Eskaliert</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Priorität" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="alle">Alle Prioritäten</SelectItem>
+            <SelectItem value="hoch">Hoch</SelectItem>
+            <SelectItem value="mittel">Mittel</SelectItem>
+            <SelectItem value="niedrig">Niedrig</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Ticket suchen..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Ergebnis-Zähler */}
+      {!isLoading && tickets && (
+        <p className="text-sm text-muted-foreground">
+          {tickets.length} Ticket{tickets.length !== 1 ? "s" : ""} gefunden
+        </p>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -62,7 +128,7 @@ const TicketList = () => {
         </div>
       ) : !tickets?.length ? (
         <div className="flex items-center justify-center h-40 text-muted-foreground">
-          Keine Tickets vorhanden
+          Keine Tickets gefunden
         </div>
       ) : (
         <div className="rounded-lg border bg-card">
