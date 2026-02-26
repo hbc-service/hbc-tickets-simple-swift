@@ -1,5 +1,6 @@
-import { LayoutDashboard, Ticket, FolderKanban, CheckSquare, Shield } from "lucide-react";
+import { LayoutDashboard, Ticket, FolderKanban, CheckSquare, Shield, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -12,15 +13,25 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 
-const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Tickets", url: "/dashboard/tickets", icon: Ticket },
-  { title: "Projekte", url: "/dashboard/projekte", icon: FolderKanban },
-  { title: "Meine Aufgaben", url: "/dashboard/aufgaben", icon: CheckSquare },
-  { title: "Admin", url: "/dashboard/admin", icon: Shield },
+const adminRoles = ["admin", "geschaeftsfuehrung"];
+const managerRoles = ["manager", "city_manager", "area_manager", "objektleiter"];
+const employeeRoles = ["reinigung", "service", "sicherheit"];
+
+const allItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, roles: [...adminRoles, ...managerRoles, ...employeeRoles] },
+  { title: "Tickets", url: "/dashboard/tickets", icon: Ticket, roles: [...adminRoles, ...managerRoles] },
+  { title: "Projekte", url: "/dashboard/projekte", icon: FolderKanban, roles: [...adminRoles, ...managerRoles] },
+  { title: "Mitarbeiter", url: "/dashboard/mitarbeiter", icon: Users, roles: adminRoles },
+  { title: "Meine Aufgaben", url: "/dashboard/aufgaben", icon: CheckSquare, roles: [...managerRoles, ...employeeRoles] },
+  { title: "Admin", url: "/dashboard/admin", icon: Shield, roles: adminRoles },
 ];
 
 export function AppSidebar() {
+  const { profile } = useAuth();
+  const role = profile?.role?.toLowerCase() ?? "";
+
+  const navItems = allItems.filter((item) => item.roles.includes(role));
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 border-b border-sidebar-border">

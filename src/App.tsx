@@ -24,11 +24,10 @@ const App = () => (
             <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<DashboardHome />} />
-              <Route path="mitarbeiter" element={<PlaceholderPage title="Mitarbeiter-Dashboard" />} />
-              <Route path="manager" element={<PlaceholderPage title="Manager-Dashboard" />} />
-              <Route path="admin" element={<PlaceholderPage title="Admin-Dashboard" />} />
               <Route path="tickets" element={<PlaceholderPage title="Tickets" />} />
               <Route path="projekte" element={<PlaceholderPage title="Projekte" />} />
+              <Route path="mitarbeiter" element={<PlaceholderPage title="Mitarbeiter" />} />
+              <Route path="admin" element={<PlaceholderPage title="Admin" />} />
               <Route path="aufgaben" element={<PlaceholderPage title="Meine Aufgaben" />} />
             </Route>
             <Route path="*" element={<NotFound />} />
