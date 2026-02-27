@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -14,6 +16,7 @@ interface Message {
 }
 
 const AlfredChat = () => {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -24,6 +27,7 @@ const AlfredChat = () => {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,18 +48,39 @@ const AlfredChat = () => {
     setInput("");
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Nicht authentifiziert");
+      }
+
+      const res = await supabase.functions.invoke("alfred-chat", {
+        body: { message: userMessage.content, conversation_id: conversationId },
+      });
+
+      if (res.error) throw res.error;
+
+      const { reply, conversation_id } = res.data as { reply: string; conversation_id: string };
+      setConversationId(conversation_id);
+
       setMessages((prev) => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: `Ich habe deine Nachricht erhalten: "${userMessage.content}". Die KI-Verbindung wird gerade eingerichtet.`,
+          content: reply,
           created_at: new Date().toISOString(),
         },
       ]);
+    } catch (err: any) {
+      toast({
+        title: "Fehler",
+        description: err?.message || "Alfred konnte nicht antworten. Bitte versuche es erneut.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
